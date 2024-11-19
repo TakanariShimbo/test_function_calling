@@ -18,7 +18,6 @@ def add_numbers(num1: float, num2: float) -> float:
     return num1 + num2
 
 
-# === ツール定義 ===
 def get_tools_definition() -> list[dict[str, Any]]:
     """関数定義を返す"""
     return [
@@ -91,6 +90,7 @@ def main() -> None:
 
     first_query_messages = [
         system_message,
+        # {"role": "user", "content": "こんにちは"},
         {"role": "user", "content": "123456789+987654321は？"},
     ]
 
