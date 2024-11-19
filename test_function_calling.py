@@ -1,28 +1,26 @@
 import json
 import os
-from typing import Any, List, Dict
+from typing import Any
 
 from dotenv import load_dotenv
 from openai import OpenAI
 
 
-# === 環境設定とクライアントの初期化 ===
 def initialize_openai_client() -> OpenAI:
-    """OpenAIクライアントを初期化します。"""
+    """OpenAIクライアントの初期化"""
     load_dotenv()
     api_key = os.environ["OPENAI_API_KEY"]
     return OpenAI(api_key=api_key)
 
 
-# === 足し算関数 ===
 def add_numbers(num1: float, num2: float) -> float:
-    """2つの数を足し算して結果を返します。"""
+    """2つの数を足し算して結果を返す"""
     return num1 + num2
 
 
 # === ツール定義 ===
-def get_tools_definition() -> List[Dict[str, Any]]:
-    """関数定義を返します。"""
+def get_tools_definition() -> list[dict[str, Any]]:
+    """関数定義を返す"""
     return [
         {
             "type": "function",
@@ -43,77 +41,78 @@ def get_tools_definition() -> List[Dict[str, Any]]:
     ]
 
 
-# === 初期メッセージ定義 ===
-def get_initial_messages() -> List[Dict[str, str]]:
-    """初期メッセージを返します。"""
-    return [
-        {"role": "system", "content": "あなたは2つの数の足し算ができる役立つアシスタントです。提供されたツールを使ってユーザーをサポートしてください。"},
-        {"role": "user", "content": "7と13を足してもらえますか？"},
-    ]
+def get_system_message() -> dict[str, Any]:
+    """初期メッセージを返す"""
+    return {
+        "role": "system",
+        "content": "あなたは2つの数の足し算ができる役立つアシスタントです。提供されたツールを使ってユーザーをサポートしてください。",
+    }
 
 
-# === OpenAI API 呼び出し ===
-def call_chat_completion(client: OpenAI, model: str, messages: List[Dict[str, str]], tools: List[Dict[str, Any]]) -> Any:
-    """OpenAIのChat Completion APIを呼び出し、メッセージを返します。"""
+def first_query(client: OpenAI, model: str, messages: list[dict[str, Any]], tools: list[dict[str, Any]]) -> tuple[bool, list[dict[str, Any]]]:
+    """ツール呼び出しを含むメッセージを返す"""
     response = client.chat.completions.create(model=model, messages=messages, tools=tools)
-    return response.choices[0].message
+    response_message = response.choices[0].message
 
+    # ツール呼び出しがない場合
+    if not hasattr(response_message, "tool_calls"):
+        return (False, [response_message])
+    if not response_message.tool_calls:
+        return (False, [response_message])
 
-def call_final_completion(client: OpenAI, model: str, messages: List[Dict[str, str]]) -> Any:
-    """計算結果を含む最終応答を生成し、メッセージを返します。"""
-    response = client.chat.completions.create(model=model, messages=messages)
-    return response.choices[0].message
-
-
-# === レスポンスの処理 ===
-def process_tool_calls(response_message: Any, client: OpenAI, messages: List[Dict[str, str]]) -> str:
-    """ツール呼び出しを処理し、計算結果を生成します。"""
+    # ツール呼び出しがある場合
     tool_call = response_message.tool_calls[0]
-    arguments = json.loads(tool_call.function.arguments)
+    arguments = json.loads(s=tool_call.function.arguments)
     num1 = arguments.get("num1")
     num2 = arguments.get("num2")
+    result = add_numbers(num1=num1, num2=num2)
 
-    # 足し算を実行
-    result = add_numbers(num1, num2)
-
-    # 計算結果を送信
     function_call_result_message = {
         "role": "tool",
         "content": json.dumps({"num1": num1, "num2": num2, "result": result}),
         "tool_call_id": tool_call.id,
     }
 
-    # 最終応答を生成
-    final_response = call_final_completion(client, model="gpt-4o", messages=messages + [response_message, function_call_result_message])
-    return final_response.content
+    return (True, [response_message, function_call_result_message])
 
 
-def process_response(response_message: Any, client: OpenAI, messages: List[Dict[str, str]]) -> str:
-    """レスポンスメッセージを処理し、最終的な出力を生成します。"""
-    if hasattr(response_message, "tool_calls") and response_message.tool_calls:
-        return process_tool_calls(response_message, client, messages)
-    return response_message.content
+def second_query(client: OpenAI, model: str, messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """計算結果を含む最終応答を生成し、メッセージを返す"""
+    response = client.chat.completions.create(model=model, messages=messages)
+    response_message = response.choices[0].message
+    return [response_message]
 
 
-# === メイン処理 ===
 def main() -> None:
-    """プログラムのエントリーポイント。"""
+    """メイン処理"""
     client = initialize_openai_client()
     tools = get_tools_definition()
-    messages = get_initial_messages()
+    system_message = get_system_message()
 
-    # 初回のAPI呼び出し
-    response_message = call_chat_completion(client, model="gpt-4o", messages=messages, tools=tools)
+    first_query_messages = [
+        system_message,
+        {"role": "user", "content": "123456789+987654321は？"},
+    ]
 
-    # デバッグ用: レスポンス全体を出力
-    print("レスポンス JSON:")
-    print(response_message)
+    is_tool_called, first_response_message = first_query(
+        client=client,
+        model="gpt-4o",
+        messages=first_query_messages,
+        tools=tools,
+    )
 
-    # レスポンスの処理
-    final_message = process_response(response_message, client, messages)
+    if not is_tool_called:
+        print("ツール呼び出しなし :", first_response_message[0].content)
+        return
 
-    # 結果の表示
-    print(final_message)
+    final_message = second_query(
+        client=client,
+        model="gpt-4o",
+        messages=first_query_messages + first_response_message,
+    )
+
+    print("ツール呼び出しあり :", final_message[0].content)
+    return
 
 
 if __name__ == "__main__":

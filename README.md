@@ -15,9 +15,9 @@ conda activate py311_function_calling
 pip install -r requirements.txt
 ```
 
-## サンプル
+## 実行
 
 ```bash
-# 実行
+# テストプログラムの実行
 python test_function_calling.py
 ```
