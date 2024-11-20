@@ -141,7 +141,7 @@ def second_query(
     return [response_message]
 
 
-def main() -> None:
+def main(user_messages: dict[str, Any]) -> None:
     """メイン処理"""
     client = initialize_openai_client()
     tools = get_tools_definition()
@@ -149,9 +149,7 @@ def main() -> None:
 
     first_query_messages = [
         system_message,
-        # {"role": "user", "content": "こんにちは"},
-        # {"role": "user", "content": "12+99は？"},
-        {"role": "user", "content": "11×11は？"},
+        user_messages,
     ]
 
     called_tool_name, first_response_message = first_query(
@@ -176,4 +174,7 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    # user_message = {"role": "user", "content": "こんにちは"}
+    user_message = {"role": "user", "content": "12+99は？"}
+    # user_message = {"role": "user", "content": "11×11は？"}
+    main(user_messages=user_message)
