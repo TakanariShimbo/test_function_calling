@@ -93,7 +93,7 @@ def get_tools_definition() -> list[dict[str, Any]]:
 
 
 def get_system_message() -> dict[str, Any]:
-    """初期メッセージを返す"""
+    """システムメッセージを返す"""
     return {
         "role": "system",
         "content": "あなたは2つの数の足し算ができる役立つアシスタントです。提供されたツールを使ってユーザーをサポートしてください。",
@@ -174,7 +174,10 @@ def main(user_messages: dict[str, Any]) -> None:
 
 
 if __name__ == "__main__":
-    # user_message = {"role": "user", "content": "こんにちは"}
-    user_message = {"role": "user", "content": "12+99は？"}
-    # user_message = {"role": "user", "content": "11×11は？"}
+    user_message = {
+        "role": "user",
+        # "content": "こんにちは",
+        "content": "12+99は？",
+        # "content": "11×11は？",
+    }
     main(user_messages=user_message)
