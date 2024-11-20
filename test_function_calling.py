@@ -4,7 +4,7 @@ from typing import Any
 
 from dotenv import load_dotenv
 from openai import OpenAI
-from openai.types.chat import ChatCompletionMessageToolCall, ChatCompletionMessage
+from openai.types.chat import ChatCompletionMessageToolCall
 
 
 def initialize_openai_client() -> OpenAI:
